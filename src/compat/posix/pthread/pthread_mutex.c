@@ -68,6 +68,10 @@ int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
 	return mutexattr_init(attr);
 }
 
+int pthread_mutexattr_setprotocol(pthread_mutexattr_t *attr, int protocol) {
+	return mutexattr_setprotocol(attr, protocol);
+}
+
 /*
 int pthread_mutexattr_setprioceiling(pthread_mutexattr_t *attr, int prioceiling) {
 	return -ENOSYS;

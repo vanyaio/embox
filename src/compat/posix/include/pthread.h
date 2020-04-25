@@ -50,7 +50,12 @@ typedef struct thread *pthread_t;
 #define PTHREAD_INHERIT_SCHED       THREAD_FLAG_PRIORITY_INHERIT
 #define PTHREAD_CREATE_DETACHED     THREAD_FLAG_DETACHED
 
-
+typedef enum pthread_mutex_protocol
+{
+	PTHREAD_PRIO_NONE = 0,
+	PTHREAD_PRIO_INHERIT,
+	PTHREAD_PRIO_PROTECT
+} pthread_mutex_protocol;
 
 typedef struct pthread_attr {
 	uint32_t flags; /* scope, inherit, detachstate */
@@ -170,7 +175,7 @@ extern int   pthread_mutexattr_destroy(pthread_mutexattr_t *);
 extern int   pthread_mutexattr_gettype(const pthread_mutexattr_t *, int *);
 extern int   pthread_mutexattr_init(pthread_mutexattr_t *);
 //extern int   pthread_mutexattr_setprioceiling(pthread_mutexattr_t *, int);
-//extern int   pthread_mutexattr_setprotocol(pthread_mutexattr_t *, int);
+extern int   pthread_mutexattr_setprotocol(pthread_mutexattr_t *, int);
 //extern int   pthread_mutexattr_setpshared(pthread_mutexattr_t *, int);
 extern int   pthread_mutexattr_settype(pthread_mutexattr_t *, int);
 

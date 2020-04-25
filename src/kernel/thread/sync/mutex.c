@@ -42,12 +42,15 @@ void mutex_init_default(struct mutex *m, const struct mutexattr *attr) {
 void mutex_init(struct mutex *m) {
 	mutex_init_default(m, NULL);
 	mutexattr_settype(&m->attr, MUTEX_RECURSIVE);
+	mutexattr_setprotocol(&m->attr, PRIO_INHERIT);
 }
 
-int mutex_lock(struct mutex *m) {
+static int common_mutex_lock(struct mutex *m, int *new_prior, int *save_ceiling) {
 	struct schedee *current = schedee_get_current();
+	mutex_protocol protocol;
+	int prior = schedee_priority_get(current);
 	int errcheck;
-	int ret, wait_ret;
+	int ret = 0, wait_ret;
 
 	assert(m);
 	assert(!critical_inside(__CRITICAL_HARDER(CRITICAL_SCHED_LOCK)));
@@ -55,13 +58,35 @@ int mutex_lock(struct mutex *m) {
 	errcheck = (m->attr.type == MUTEX_ERRORCHECK);
 
 	wait_ret = WAITQ_WAIT(&m->wq, ({
-		int done;
+		int done = 0;
 
 		sched_lock();
-		ret = mutex_trylock(m);
-		done = (ret == 0) || (errcheck && ret == -EDEADLK);
-		if (!done)
-			mutex_priority_inherit(current, m);
+
+		protocol = m->attr.protocol;
+		if ((protocol == PRIO_PROTECT) && (prior > m->attr.prioceiling)) {
+			if (!new_prior) {
+				done = 1;
+				ret = EINVAL;
+			}
+		}
+
+		if (!done) {
+			ret = mutex_trylock(m);
+			done = (ret == 0) || (errcheck && ret == -EDEADLK);
+
+			switch (protocol) {
+				case PRIO_INHERIT:
+					if (!done)
+						mutex_priority_inherit(current, m);
+					break;
+				case PRIO_PROTECT:
+					if (done && !new_prior) {
+						*save_ceiling = m->attr.prioceiling;
+						m->attr.prioceiling = *new_prior;
+					}
+			}
+		}
+
 		sched_unlock();
 		done;
 	}));
@@ -73,13 +98,27 @@ int mutex_lock(struct mutex *m) {
 	return ret;
 }
 
+int mutex_lock(struct mutex *m) {
+	return common_mutex_lock(m, NULL, NULL);
+}
+
+int pthread_mutex_setprioceiling(pthread_mutex_t *mutex, int prioceiling, int *old_ceiling) {
+	int rc = 0;
+	common_mutex_lock(m, &prioceiling, old_ceiling);
+	mutex_unlock();
+}
+
 static inline int mutex_this_owner(struct mutex *m) {
 	return m->holder == schedee_get_current();
 }
 
+/*
+ * static int common_mutex_trylock(struct mutex *m, int *prioceiling, int *old_ceiling) {
+ */
 int mutex_trylock(struct mutex *m) {
 	int res;
 	struct schedee *current = schedee_get_current();
+	pthread_mutex_protocol protocol = m->attr.protocol;
 
 	assert(m);
 	assert(!critical_inside(__CRITICAL_HARDER(CRITICAL_SCHED_LOCK)));
@@ -110,6 +149,10 @@ int mutex_trylock(struct mutex *m) {
 	assert(!critical_inside(__CRITICAL_HARDER(CRITICAL_SCHED_LOCK)));
 	return res;
 }
+
+/*
+ * int mutex_trylock(struct mutex *m) {
+ */
 
 int mutex_unlock(struct mutex *m) {
 	int res;

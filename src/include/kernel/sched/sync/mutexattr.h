@@ -24,8 +24,16 @@
 /* Doesn't provide any checking, actually it is the same as MUTEX_NORMAL */
 #define MUTEX_DEFAULT 		MUTEX_NORMAL
 
+typedef enum mutex_protocol
+{
+	PRIO_NONE = 0,
+	PRIO_INHERIT,
+	PRIO_PROTECT
+} mutex_protocol;
 
 struct mutexattr {
+	int prioceiling;
+	mutex_protocol protocol;
 	int type;
 };
 
@@ -58,5 +66,12 @@ extern int mutexattr_gettype(const struct mutexattr *attr, int *type);
  * @param type type to set
  */
 extern int mutexattr_settype(struct mutexattr *attr, int type);
+
+/**
+ * sets given protocol to mutexattr protocol
+ * @param mutexattr will contain new protocol
+ * @param protocol protocol to set
+ */
+extern int mutexattr_setprotocol(struct mutexattr *attr, int protocol);
 
 #endif /* MUTEXATTR_H_ */

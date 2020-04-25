@@ -12,6 +12,7 @@
 
 int mutexattr_init(struct mutexattr *attr) {
 	attr->type = MUTEX_DEFAULT;
+	attr->protocol = PRIO_INHERIT;
 
 	return ENOERR;
 }
@@ -36,6 +37,12 @@ int mutexattr_gettype(const struct mutexattr *attr, int *type) {
 
 int mutexattr_settype(struct mutexattr *attr, int type) {
 	attr->type = type;
+
+	return ENOERR;
+}
+
+int mutexattr_setprotocol(struct mutexattr *attr, int protocol) {
+	attr->protocol = protocol;
 
 	return ENOERR;
 }
